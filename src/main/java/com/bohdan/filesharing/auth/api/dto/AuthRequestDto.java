@@ -1,4 +1,4 @@
-package com.bohdan.filesharing.auth.api;
+package com.bohdan.filesharing.auth.api.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Email;
