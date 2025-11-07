@@ -16,12 +16,17 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+import software.amazon.awssdk.core.ResponseBytes;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 import software.amazon.awssdk.services.s3.model.ObjectCannedACL;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
 import java.util.Optional;
+import java.util.List;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -70,6 +75,24 @@ public class FileService {
                 .s3Key(savedFile.getS3Key())
                 .url(savedFile.getFileUrl())
                 .build();
+    }
+
+    public List<FileItem> getMyFiles(Authentication auth) {
+        User user = userRepository.findByEmail(auth.getName())
+                .orElseThrow(() -> new UserNotFoundException("User not found: " + auth.getName()));
+
+        List<FileItem> myFiles = fileRepository.findAllByOwner(user);
+
+        return myFiles.stream()
+                .map(file -> FileItem.builder()
+                        .id(file.getId())
+                        .s3Key(file.getS3Key())
+                        .fileUrl(file.getFileUrl())
+                        .fileSize(file.getFileSize())
+                        .contentType(file.getContentType())
+                        .isPublic(file.getIsPublic())
+                        .build())
+                .toList();
     }
 
     @Transactional
