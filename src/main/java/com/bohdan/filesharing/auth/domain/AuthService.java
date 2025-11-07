@@ -1,7 +1,7 @@
 package com.bohdan.filesharing.auth.domain;
 
-import com.bohdan.filesharing.auth.api.AuthRequestDto;
-import com.bohdan.filesharing.auth.api.AuthResponseDto;
+import com.bohdan.filesharing.auth.api.dto.AuthRequestDto;
+import com.bohdan.filesharing.auth.api.dto.AuthResponseDto;
 import com.bohdan.filesharing.auth.security.JwtUtil;
 import com.bohdan.filesharing.common.exception.UserAuthenticationException;
 import com.bohdan.filesharing.user.db.User;
@@ -9,13 +9,10 @@ import com.bohdan.filesharing.user.db.UserRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.security.authentication.BadCredentialsException;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
-import java.util.Date;
 
 @Service
 @RequiredArgsConstructor

@@ -1,5 +1,7 @@
 package com.bohdan.filesharing.auth.api;
 
+import com.bohdan.filesharing.auth.api.dto.AuthRequestDto;
+import com.bohdan.filesharing.auth.api.dto.AuthResponseDto;
 import com.bohdan.filesharing.auth.domain.AuthService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -14,9 +16,9 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-@RequestMapping("/api/auth")
 
 @RestController
+@RequestMapping("/api/auth")
 @RequiredArgsConstructor
 @Slf4j
 public class AuthController {
