@@ -22,6 +22,7 @@ import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 import software.amazon.awssdk.services.s3.model.ObjectCannedACL;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -64,6 +65,24 @@ public class FileService {
                 .s3Key(savedFile.getS3Key())
                 .url(savedFile.getFileUrl())
                 .build();
+    }
+
+    public List<FileItem> getMyFiles(Authentication auth) {
+        User user = userRepository.findByEmail(auth.getName())
+                .orElseThrow(() -> new UserNotFoundException("User not found: " + auth.getName()));
+
+        List<FileItem> myFiles = fileRepository.findAllByOwner(user);
+
+        return myFiles.stream()
+                .map(file -> FileItem.builder()
+                        .id(file.getId())
+                        .s3Key(file.getS3Key())
+                        .fileUrl(file.getFileUrl())
+                        .fileSize(file.getFileSize())
+                        .contentType(file.getContentType())
+                        .isPublic(file.getIsPublic())
+                        .build())
+                .toList();
     }
 
     private String loadFileToS3Bucket(MultipartFile file, String s3Key, Boolean isPublic) {

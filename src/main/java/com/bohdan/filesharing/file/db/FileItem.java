@@ -1,6 +1,7 @@
 package com.bohdan.filesharing.file.db;
 
 import com.bohdan.filesharing.user.db.User;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -47,5 +48,6 @@ public class FileItem {
 
     @ManyToOne
     @JoinColumn(name = "user_id")
+    @JsonIgnore
     private User owner;
 }
