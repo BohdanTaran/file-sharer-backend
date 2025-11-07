@@ -12,6 +12,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -58,12 +59,64 @@ public class FileController {
             content = @Content
     )
     @PostMapping("/upload")
-    public ResponseEntity<FileItemDto> upload(
+    public ResponseEntity<FileItemDto> uploadFile(
             @RequestParam("file") MultipartFile file,
             @RequestParam("isPublic") Boolean isPublic,
             @Parameter(hidden = true) Authentication auth
     ) {
         FileItemDto response = fileService.uploadFile(file, isPublic, auth);
+        log.info("File {} was uploaded successfully", file.getOriginalFilename());
         return ResponseEntity.ok(response);
+    }
+    /**
+     * Delete a file from AWS S3 and the database.
+     *
+     * @param s3Key The unique S3 object key identifying the file to delete.
+     * @return A success message if the file was deleted successfully.
+     *
+     * This endpoint deletes both the file object from AWS S3 and its record
+     * from the database. Only files owned by the authenticated user can be deleted.
+     */
+    @Operation(
+            summary = "Delete file",
+            description = "Deletes the specified file from AWS S3 and removes its record from the database. " +
+                    "The authenticated user must be the owner of the file.",
+            responses = {
+                    @ApiResponse(
+                            responseCode = "200",
+                            description = "File deleted successfully",
+                            content = @Content(
+                                    mediaType = "application/json",
+                                    examples = @ExampleObject(value = "File was deleted successfully")
+                            )
+                    ),
+                    @ApiResponse(
+                            responseCode = "400",
+                            description = "Invalid S3 key or file not found",
+                            content = @Content(
+                                    mediaType = "application/json",
+                                    examples = @ExampleObject(value = "File was not found")
+                            )
+                    ),
+                    @ApiResponse(
+                            responseCode = "403",
+                            description = "User is not allowed to delete this file",
+                            content = @Content(
+                                    mediaType = "application/json",
+                                    examples = @ExampleObject(value = "Access denied")
+                            )
+                    ),
+                    @ApiResponse(
+                            responseCode = "500",
+                            description = "Internal server error during S3 deletion",
+                            content = @Content
+                    )
+            }
+    )
+    @DeleteMapping
+    public ResponseEntity<String> removeFile(@RequestParam("s3Key") String s3Key) {
+        fileService.deleteExistedFile(s3Key);
+        log.info("File {} was deleted successfully", s3Key);
+        return ResponseEntity.ok("File was deleted successfully");
     }
 }

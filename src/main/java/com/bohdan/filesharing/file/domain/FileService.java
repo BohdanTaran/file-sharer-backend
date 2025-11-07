@@ -1,6 +1,8 @@
 package com.bohdan.filesharing.file.domain;
 
-import com.bohdan.filesharing.common.exception.LoadFileToS3Exception;
+import com.bohdan.filesharing.common.exception.BadRequestException;
+import com.bohdan.filesharing.common.exception.LoadFileToS3ClientException;
+import com.bohdan.filesharing.common.exception.LoadFileToS3ServerException;
 import com.bohdan.filesharing.common.exception.UserNotFoundException;
 import com.bohdan.filesharing.file.api.dto.FileItemDto;
 import com.bohdan.filesharing.file.db.FileItem;
@@ -14,15 +16,12 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
-import software.amazon.awssdk.core.ResponseBytes;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
-import software.amazon.awssdk.services.s3.model.GetObjectRequest;
-import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 import software.amazon.awssdk.services.s3.model.ObjectCannedACL;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
-import java.util.UUID;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -46,7 +45,14 @@ public class FileService {
 
         String generatedS3Key = "users/" + user.getEmail() + "/" + file.getOriginalFilename();
 
+        Optional<FileItem> fileWithSameS3Key = fileRepository.findByS3Key(generatedS3Key);
+        if (fileWithSameS3Key.isPresent()) {
+            log.error("File with name {} is a duplication and could not be uploaded", file.getOriginalFilename());
+            throw new LoadFileToS3ClientException("File with name: " + file.getOriginalFilename() + " already exists!");
+        }
+
         String savedFileURL = loadFileToS3Bucket(file, generatedS3Key, isPublic);
+        log.info("File {} was successfully uploaded to the AWS S3");
 
         FileItem fileToSave = FileItem.builder()
                 .s3Key(generatedS3Key)
@@ -64,6 +70,26 @@ public class FileService {
                 .s3Key(savedFile.getS3Key())
                 .url(savedFile.getFileUrl())
                 .build();
+    }
+
+    @Transactional
+    public void deleteExistedFile(String s3Key) {
+        FileItem file = fileRepository.findByS3Key(s3Key)
+                .orElseThrow(() -> new BadRequestException("File was not found"));
+
+        try {
+            s3Client.deleteObject(builder -> builder
+                    .bucket(bucketName)
+                    .key(s3Key)
+                    .build());
+            log.info("File {} successfully deleted from S3", s3Key);
+
+            fileRepository.delete(file);
+            log.info("File {} successfully deleted from database", s3Key);
+        } catch (Exception e) {
+            log.error("Error deleting file {} from S3: {}", s3Key, e.getMessage());
+            throw new LoadFileToS3ServerException("Error deleting file from S3. Please try again.");
+        }
     }
 
     private String loadFileToS3Bucket(MultipartFile file, String s3Key, Boolean isPublic) {
@@ -85,7 +111,7 @@ public class FileService {
             return "https://" + bucketName + ".s3." + region + ".amazonaws.com/" + s3Key;
         } catch (Exception e) {
             log.error("Error during file loading to AWS S3: {}", e.getMessage());
-            throw new LoadFileToS3Exception("Error during file loading. Please try again.");
+            throw new LoadFileToS3ServerException("Error during file loading. Please try again.");
         }
     }
 }
